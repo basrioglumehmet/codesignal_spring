@@ -382,3 +382,21 @@ com.example.project
 ├── repository
 ├── controller
 ```
+
+## Component ve Bean Annotation Farkı
+- @Component: Class seviyesinde uygulanır ve Spring için işaretlenir. Spring bir adet instance oluşturur ve onu yönetir. Dikkat etmenizi istiyorum @Component sadece tek bir sınıfı yönetir, **birden fazla instance oluşturmanız durumunda uygun değildir.**
+- @Bean Nedir?
+  - @Bean, Spring IoC Container tarafından yönetilen bir nesne (bean) oluşturmak için kullanılan bir anotasyondur.
+  - @Configuration anotasyonu ile işaretlenmiş sınıflar içinde kullanılır.
+  - Spring'in otomatik olarak yönetmediği (örn: 3rd party library'lerden gelen) nesneleri Spring Context'e dahil etmemizi sağlar.
+  - Spring’in component scanning mekanizması (@Component, @Service, @Repository, @Controller) ile otomatik olarak algılayamadığı bağımlılıkları yönetmemize yardımcı olur.
+```kotlin
+@Configuration
+public class AppConfig {
+    
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
