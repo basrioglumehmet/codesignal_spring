@@ -406,3 +406,83 @@ class RestConfig {
   }
 }
 ```
+
+# Dependency Injectiona Bir Bakış Atalım
+- Doğru kullanıldığında güçlü ve esnek bir yapıdır. Manuel olarak nesne oluşturmak yerine Dependency Injection (Bağımlılık Enjeksiyonu) kullanarak bağımlılıkları yönetebiliriz. Eğer manuel instance oluşturursak, birkaç farklı yaklaşım kullanabiliriz:
+  - Default (varsayılan) constructor veya setter metodları
+  -   Parametreli constructor kullanarak bağımlılıkları doğrudan geçmek
+  -   Reflection kullanarak nesne oluşturmak
+
+Spring, bağımlılıkları otomatik olarak enjekte ederek bu süreçleri bizim için kolaylaştırır. Bunu, tipine göre arayarak uygun nesneyi bulup enjekte ederek yapar.
+Spring’de bağımlılık enjeksiyonu için `@Autowired` anotasyonu kullanılır.
+Nerede ` @Autowired` varsa, Spring oraya uygun bağımlılığı enjekte eder.
+
+## Constructor Bazlı DI
+@Autowired ile işaretlenen constructor içerisinde ilgili olanın injectionını yapar.
+```kotlin
+package com.codesignal
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
+
+@Component
+class UserService @Autowired constructor(
+    private val userRepository: UserRepository
+)
+```
+## Field bazlı `lateinit` @Autowired (LateInit Önerilmez)
+lateinit anahtar sözcüğünün bu özelliklerin daha sonra başlatılacağını belirtmek için kullanıldığını unutmayın
+```kotlin
+package com.codesignal
+
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
+
+@Service
+class UserService {
+  @Autowired
+  lateinit var userRepository: UserRepository
+}
+```
+## Method DI
+Spring ayrıca `@Bean` açıklamasını kullanarak yöntem tabanlı bağımlılık enjeksiyonuna da izin verir. Bu teknik, Kotlin yapılandırma sınıflarındaki yöntem parametreleri aracılığıyla bağımlılıkları enjekte etmeyi içerir.
+
+```kotlin
+package com.codesignal.springbasics.config
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.web.client.RestTemplate
+
+@Configuration
+class RestConfig {
+    @Bean("restTemplate")
+    fun restTemplate():RestTemplate{
+        return RestTemplate()
+    }
+}
+```
+```kotlin
+package com.codesignal.springbasics
+
+import jakarta.annotation.PostConstruct
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.web.client.RestTemplate
+
+@SpringBootApplication
+class SpringbasicsApplication(private val restTemplate: RestTemplate) {
+
+	@PostConstruct
+	fun fetchJsonData() {
+		val url = "https://jsonplaceholder.typicode.com/todos/1"
+		val response = restTemplate.getForObject(url, String::class.java)
+		println("API Response: $response")
+	}
+}
+
+fun main(args: Array<String>) {
+	runApplication<SpringbasicsApplication>(*args)
+}
+
+```
