@@ -149,3 +149,236 @@ tasks.withType<Test> {
   }` Önemlidir! JVM özelliklerinin kullanılacağı sürüm tanımlanır.
 - Kotlin JVM Toolchain:  Kotlin compiler'ın JVM 17 sürümüne compile etmesi gerektiğini söyler.
 - Test Configuration: `tasks.withType<Test> { useJUnitPlatform() }` testleri çalıştırmak için JUnit Platform'un kullanılması gerektiğini belirtir. Bu, modern JUnit 5 özelliklerini kullanmanızı sağlar. 
+
+# Bootstrap Class (Başlangıç Sınıfı)
+Bir Spring Boot uygulamasının temel taşı, bootstrap sınıfıdır. Bu sınıf, uygulamayı başlatan ve Spring konteynerini oluşturan ana giriş noktasıdır.
+```kotlin
+package com.codesignal.springbasics
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+
+@SpringBootApplication
+class SpringbasicsApplication
+
+fun main(args: Array<String>) {
+	runApplication<SpringbasicsApplication>(*args)
+}
+```
+`SpringBootApplication` annotation'ı özellikle güçlüdür. Özetle, Uygulamanın yapılandırmalarını bizim yerimize ayarlamasını yapar.
+ Diğer önemli bileşenimiz main metot'udur. Bu metot uygulamanın giriş noktasına hizmet eder ve jar dosyası çalıştırıldığı vakit yürütülür. `runApplication<MyApplication>(*args)` ise uygulamanın başlatılması gerektiğini ve gömülü olan Tomcat sunucusunu başlatmasını söyler.
+
+# Application Yapılandırma Dosyasını Anlayalım
+`application.properties` veya `application.yml` Spring Boot uygulamasının çeşitli yapılandırmaları burada tanımlanır ve `src/main/resources` dizisi altında toplanır.
+- server.port: Sunucunun hangi portta çalışacağının belirtildiği yerdir. `server.port = 8080`
+- logging.level.root: Log seviyesinin tanımlandığı yerdir. `logging.level.root = DEBUG`
+- Database Yapılandırması:
+  - spring.datasource.url= `protokol (jdbc)` ://`veritabanı_türü (mysql veya postgres)`://`host ve port bilgisi (localhost:3306)`/`veri tabanı adı (mydb)` 
+  - spring.datasource.username= Veritabanının kullanıcı adıdır
+  - spring.datasource.password= Veritabanının kullanıcı şifresidir
+- Custom Application Properties: Uygulamanızda kullanmak üzere özel propertyler ekleyebilirsiniz. Bunlara daha sonra Spring @Value annotation veya Environment arayüzü kullanılarak kodunuzda erişilebilir.
+
+# Yaygın Gradle Komutları
+- gradle build: Projeyi compile eder
+- gradle clean: Build dosyasını temizler
+- gradle test: Testleri çalıştırır
+- gradle bootRun: Spring Boot uygulamasını ayağa kaldırır
+
+# Tomcat <img src="./Apache_Tomcat_logo.svg.png" width="28" />
+Web geliştirmeye yeni başladıysanız, sınırlı bir süre boyunca çalışıp sonra sonlanan programlar yazmaya alışkın olabilirsiniz. Ancak, bir web uygulaması oluştururken, uygulamanın kullanıcılardan HTTP istekleri almak ve bunlara yanıt vermek için sürekli çalışması gerekir. Spring Boot'un ağırlıklı olarak web geliştirme için kullanıldığı göz önüne alındığında, gömülü bir Tomcat sunucusu içerir. Bu sunucu, gelen web isteklerini dinleyerek uygulamanızı süresiz olarak çalıştırır. Varsayılan olarak, uygulama 8080 numaralı bağlantı noktasında çalışır. Sonuç olarak, gradle bootRun komutunu çalıştırdığınızda, uygulamanız basitçe çalışıp çıkmaz; başlar ve siz manuel olarak durdurana kadar etkin kalır.
+# Actuator
+`implementation("org.springframework.boot:spring-boot-starter-actuator")` Actuator, Spring Boot uygulamalarının yönetimi ve izleme işlemlerini kolaylaştıran bir araçtır.
+```yaml
+management:
+  endpoint:
+    health:
+      show-details=always:
+```
+bu yaml yapılandırma tanımı her zaman detayları göster dediğimiz kısımdır. `http://localhost:8080/actuator/health` adresinden erişim sağlanır.
+```json
+{
+    "status" : "UP"
+}
+```
+gibi json response'u döner.
+health yerine farklı durumlarıda sorgulayabilirsiniz.
+
+autoconfig = Tüm autoconfig tanımlamalarını gösterir
+
+beans = Spring tarafından yönetilen tüm beanleri gösterir
+
+dump = Thread dump almayı sağlar.
+
+env = Spring’s ConfigurableEnvironment değerlerini gösterir.
+
+health = Uygulama sağlığını gösterir.
+
+info = Uygulama bilgilerini gösterir.
+
+loggers = Uygulamada kullanılan log bilgileri gösterir.
+
+mappings = Uygulamada kullanılan log bilgileri gösterir.
+
+trace = En son kullanılan 100 HTTP isteklerini listeler.
+
+# Dependency Nedir
+Spring Bean konusuna değinmeden önce, dependency nedir anlayarak başlayalım. Bir sandviç yaptığınızı düşünün. Bu sandviçin içerisine ekmek, domates ve peynir gibi class'lar oluşturulur, yanında ızgaraya yer verilir ki sandviç yapabilelim. Sandviç yapmak için ızgaranın gerekli malzemelere, yani class'lara ihtiyacı vardır. İşte tam bu noktada bağımlılıklar devreye girmektedir.
+## Sandviç Problemini Tanımlayalım
+Sandviç problemini tanımlarken manuel bağımlılık yönetimi yapacağız.
+
+```kotlin
+class Bread
+class Lettuce
+class Tomato
+class Cheese
+class Sandwich
+class Grill
+
+class SandwichMaker(
+    private val grill: Grill,
+    private val bread: Bread,
+    private val lettuce: Lettuce,
+    private val tomato: Tomato,
+    private val cheese: Cheese
+) {
+    fun prepareSandwich(): Sandwich {
+        println("Sandwich is ready!")
+        return Sandwich()
+    }
+}
+
+fun main() {
+    val grill = Grill()
+    val bread = Bread()
+    val lettuce = Lettuce()
+    val tomato = Tomato()
+    val cheese = Cheese()
+    val sandwichMaker = SandwichMaker(grill, bread, lettuce, tomato, cheese)
+    sandwichMaker.prepareSandwich()
+}
+```
+Manuel yönetim karmaşıktır ve bağımlılıklardan emin olunması gerekmektedir. Bağımlılıkların sayısı arttığı taktirde yönetimi zahmetli olacaktır.
+
+Spring Context ve Beans Bizi Bu Problemlerden Kurtarıyor
+Inversion of Control (IoC) ve Dependency Injection (DI), Spring framework'ü ile birlikte nesne yönetimini ve bağımlılıkları kolaylaştırarak, yazılım geliştirmede karışıklıkları önler. Bu da uygulamanın daha esnek, modüler ve bakımı daha kolay hale gelmesini sağlar.
+
+# IoC (Inversion of Control)
+IoC, Temelde bir nesnenin kontrolünü dışarıya (genellikle bir framework'e) devretme prensibidir. Yani, uygulamanın nesne yaratma ve yönetme sorumluluğu, framework (örneğin Spring) gibi bir dış bileşene bırakılır. Bu sayede kodumuz daha esnek, modüler ve test edilebilir hale gelir.
+
+IoC'nin üç temel yönü:
+
+- Nesne Oluşturma: Bir sınıfın nesnesi oluşturulurken, bu işin nasıl yapılacağı (örneğin, hangi parametrelerin geçileceği) dışarıda bir sistem tarafından belirlenir. Yani, nesnenin yaratılmasındaki kontrol uygulama kodundan alınır.
+
+- Nesne Yapılandırma: Nesne yaratıldıktan sonra, bu nesnenin yapılandırılmasına (örneğin, gerekli bağımlılıklarının verilmesine) da dışarıdan karar verilir. Bu sayede, sınıflar arası bağımlılıkları yönetmek daha kolay hale gelir.
+
+- Nesne Yönetimi ve Denetimi: Nesnelerin yaşam döngüsünün yönetimi de dışarıya devredilir. Spring Context, nesnelerin ne zaman oluşturulacağı, ne zaman yok edileceği gibi süreçleri yönetir. Bu, Garbage Collection (Çöp Toplayıcı) ve Bean yaşam döngüsü gibi süreçlerin otomatikleşmesini sağlar.
+
+## Spring Context ve Beans
+Spring, nesnelerin yönetimini IoC Container (Spring Context) aracılığıyla yapar. Spring Context, uygulama sırasında oluşturulan ve yönetilen nesneleri Beans olarak adlandırır.
+
+`Bean`: Spring Context içinde yönetilen her bir nesne bir Bean olarak adlandırılır.
+
+`Spring Context`: IoC Container'ın bir başka adı olan Spring Context, tüm Beans'lerin oluşturulmasından, yapılandırılmasından ve yaşam döngüsünün yönetilmesinden sorumludur.
+Spring Context, Bean sırasını ve biçimini belirleyebilir. Bu şu anlama gelir:
+
+- Bean'lerin Sırası: Spring Context, bean'lerin oluşturulma sırasını belirler. Örneğin, bir bean'in bir başka bean'e bağımlılığı varsa, Spring doğru sırayla bu bean'leri oluşturur.
+- Bean'lerin Biçimi: Spring, bean'leri yapılandırırken, @Component, @Service, @Repository, @Controller gibi anotasyonları kullanarak ve XML veya Java Config ile bean'lerin yapılandırılmasını kontrol eder. Bu, bean'lerin nasıl ve ne şekilde oluşturulacağına dair kontrol sağlar.
+
+# @Component Annotation
+Spring Framework'e bu classın yönetiminden sen sorumlusun dememizdir. `@Component` tanımlandığı zaman singleton(single instance) oluşturur.
+```kotlin
+package com.codesignal
+
+import org.springframework.stereotype.Component
+
+@Component
+class Grill
+```
+Peki @Component ne yapıyor?
+- Discovery: Component ile işaretlenmiş class'ları arar.
+- Creation: Class başına instance oluşturur bunun anlamı manuel olarak obje oluşturmana gerek yok demektir.
+- Management: Spring bahsettiğimiz objelerin yönetiminden, oluşturulmasından ve provided olmasından sorumludur.
+
+Şu sebeplerden dolayı kullanışlıdır:
+- Manuel kullanımı azaltır
+- Component ile işaretlenen class'lara merkezi yönetim sağlar
+- Spring, Component ile işaretlenen nesnelerin ihtiyaç duyulduğu diğer bölümlerine nesnemizi otomatik olarak sağlar.
+
+# Spring Bean'leri Nasıl Araştırır?
+@Component, @Service veya @Repository ile işaretlenen class'ları base ve alt package konumunda araştırmaktadır (`src/main/kotlin/com/codesignal/todoapp`)
+
+# @Bean Annotation
+`@Component` işaretlemesine ek olarak `@Bean kullanabilirsiniz. Bu bize Bean'ler üzerinde ayrıntılı kontrol sağlar.
+
+```kotlin
+package com.codesignal
+
+import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.runApplication
+import org.springframework.context.annotation.Bean
+
+@SpringBootApplication
+class Application {
+    @Bean
+    fun grill(): Grill {
+        return Grill()
+    }
+}
+
+fun main(args: Array<String>) {
+    runApplication<Application>(*args)
+}
+```
+
+# Bölünmüş Yapılandırma Sınıfları (@Configuration Annotation)
+Daha güzel bir mimari yapısı için yapılandırmaları `@Configuration` annotation ile ayırabiliriz.
+```kotlin
+package com.codesignal
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+
+@Configuration
+class SandwichConfig {
+    @Bean
+    fun bread(): Bread {
+        return Bread()
+    }
+
+    @Bean
+    fun lettuce(): Lettuce {
+        return Lettuce()
+    }
+
+    @Bean
+    fun tomato(): Tomato {
+        return Tomato()
+    }
+
+    @Bean
+    fun cheese(): Cheese {
+        return Cheese()
+    }
+
+    @Bean
+    fun sandwich(): Sandwich {
+        return Sandwich(bread(), lettuce(), tomato(), cheese(), grill())
+    }
+
+    @Bean
+    fun grill(): Grill {
+        return Grill()
+    }
+}
+```
+Spring, uygulama başlatıldığında tüm class'ları tarar (component scanning) ve @Configuration ile işaretlenmiş olan sınıfları bulur. Daha sonra, bu sınıfların içindeki @Bean ile işaretlenmiş metotları tarar. Eğer @Bean anotasyonu ile işaretlenen bir metot varsa, Spring bu metodu çağırarak dönen nesneyi Spring Context'e (IoC Container'a) ekler. Böylece, bu nesne artık bir instance (bean) olarak yönetilir ve gerektiğinde bağımlılık olarak enjekte edilebilir. Gerçek dünya uygulamalarında katmanlı mimaride config adlı katmanda yapılandırmalarımızı toplarız.
+```
+com.example.project
+├── config
+│   ├── AppConfig.java
+│   ├── SecurityConfig.java
+│   ├── DatabaseConfig.java
+├── service
+├── repository
+├── controller
+```
