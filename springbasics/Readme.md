@@ -391,12 +391,18 @@ com.example.project
   - Spring'in otomatik olarak yönetmediği (örn: 3rd party library'lerden gelen) nesneleri Spring Context'e dahil etmemizi sağlar.
   - Spring’in component scanning mekanizması (@Component, @Service, @Repository, @Controller) ile otomatik olarak algılayamadığı bağımlılıkları yönetmemize yardımcı olur.
 ```kotlin
+package com.codesignal.springbasics.config
+
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
+import org.springframework.web.client.RestTemplate
+
 @Configuration
-public class AppConfig {
-    
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
+class RestConfig {
+  @Bean("restTemplate")
+  fun restTemplate():RestTemplate{
+    return RestTemplate()
+  }
 }
 ```
